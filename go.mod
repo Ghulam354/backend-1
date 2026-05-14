@@ -1,3 +1,3 @@
-module github.com/Ghulam354/backend-1
+module backend-1
 
-go 1.26.2
+go 1.22.2
