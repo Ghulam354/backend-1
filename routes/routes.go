@@ -5,16 +5,16 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/Ghulam354/JapaneseClub/backend-1/database" // Sesuaikan dengan path modul di go.mod kamu
+	"backend-1/database"
 )
 
 // InputSiswa adalah struktur data yang dikirim oleh frontend saat mendaftar
 type InputSiswa struct {
 	Nama         string `json:"nama" binding:"required"`
 	NoHP         string `json:"no_hp" binding:"required"`
-	TanggalLahir string `json:"tanggal_lahir" binding:"required"` // Format dari frontend: YYYY-MM-DD (Contoh: 2009-08-17)
-	Kelas        string `json:"kelas" binding:"required"`         // Menerima string pilihan kelas (e.g., "X PPLG 1")
-	Divisi       string `json:"divisi" binding:"required"`       // Menerima pilihan divisi
+	TanggalLahir string `json:"tanggal_lahir" binding:"required"`
+	Kelas        string `json:"kelas" binding:"required"`         
+	Divisi       string `json:"divisi" binding:"required"`       
 }
 
 // SetupRoutes mendaftarkan semua endpoint API untuk JapaneseClub
