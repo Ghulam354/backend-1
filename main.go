@@ -1,26 +1,17 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"net/http"
+	"github.com/gin-gonic/gin"
+
+	"backend-1/config"
+	"backend-1/database"
+	"backend-1/routes"
 )
 
-func main() {
-	// 1. Definisikan handler
-	http.HandleFunc("/api/hello", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"message": "Koneksi Backend Berhasil!"})
-	})
+func main(){
+	fmt.Println("Memulai Server...")
 
-	// 2. Tambahkan Println SEBELUM ListenAndServe
-	fmt.Println("Server Go sedang berjalan di http://localhost:8080")
-	fmt.Println("Tekan Ctrl+C untuk menghentikan server")
-
-	// 3. Jalankan server
-	err := http.ListenAndServe(":8080", nil)
-	if err != nil {
-		fmt.Println("Gagal menjalankan server:", err)
-	}
+	fmt.Println("Server Berjalan di http://localhost:8000")
+	router.run(":8000")
 }
