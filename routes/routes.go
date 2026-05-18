@@ -1,80 +1,61 @@
 package routes
 
 import (
+	"backend-1/controllers"
+	"backend-1/database"
+	"backend-1/middleware"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
-	"backend-1/database"
 )
 
-// InputSiswa adalah struktur data yang dikirim oleh frontend saat mendaftar
-type InputSiswa struct {
-	Nama         string `json:"nama" binding:"required"`
-	NoHP         string `json:"no_hp" binding:"required"`
-	TanggalLahir string `json:"tanggal_lahir" binding:"required"`
-	Kelas        string `json:"kelas" binding:"required"`         
-	Divisi       string `json:"divisi" binding:"required"`       
-}
-
-// SetupRoutes mendaftarkan semua endpoint API untuk JapaneseClub
 func SetupRoutes(router *gin.Engine) {
+	// ==================== 1. ROUTE PUBLIK ====================
+	// Jalur umum yang tidak dikunci JWT (Bisa diakses tanpa login)
+	
+	// Untuk kebutuhan indikator status koneksi di halaman Home frontend kamu
+	router.GET("/api/ping", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok", "message": "Server JapaneseClub Aktif!"})
+	})
+
+	// Jalur untuk eksekusi login admin
+	router.POST("/api/login", controllers.LoginAdmin)
+
+
+	// ==================== 2. ROUTE TERPROTEKSI ====================
+	// Jalur manajemen data siswa yang dipagari oleh AuthMiddleware (Wajib bawa token JWT)
+	
 	api := router.Group("/api")
+	api.Use(middleware.AuthMiddleware()) // <--- 'Satpam' pengunci ditaruh di sini
 	{
-		// 1. Endpoint untuk Mengambil Semua Data Siswa
+		// 1. Ambil Data Siswa (GET /api/siswa)
 		api.GET("/siswa", func(c *gin.Context) {
-			var daftarSiswa []database.DataSiswa
-			
-			// Mengambil data dari database, diurutkan berdasarkan id paling baru
-			if err := database.DB.Order("id desc").Find(&daftarSiswa).Error; err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengambil data dari database"})
+			var siswa []database.DataSiswa
+			if err := database.DB.Find(&siswa).Error; err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
-
-			c.JSON(http.StatusOK, gin.H{
-				"status":  "success",
-				"message": "Data siswa berhasil diambil",
-				"data":    daftarSiswa,
-			})
+			c.JSON(http.StatusOK, siswa)
 		})
 
-		// 2. Endpoint untuk Menambah Data Siswa Baru
+		// 2. Tambah Data Siswa Baru (POST /api/siswa)
 		api.POST("/siswa", func(c *gin.Context) {
-			var input InputSiswa
+			var input database.DataSiswa
 
-			// Validasi input dari frontend, jika ada kolom yang kosong (required) akan error
+			// Bind data JSON dari frontend ke struct DataSiswa
 			if err := c.ShouldBindJSON(&input); err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "Semua kolom harus diisi dengan benar"})
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 				return
 			}
 
-			// Mengubah string "YYYY-MM-DD" dari frontend menjadi tipe time.Time agar bisa masuk ke PostgreSQL
-			parsedDate, err := time.Parse("2006-01-02", input.TanggalLahir)
-			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "Format tanggal lahir harus YYYY-MM-DD"})
+			// Simpan data ke database PostgreSQL via GORM
+			if err := database.DB.Create(&input).Error; err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
 
-			// Memasukkan data dari input frontend ke dalam struktur tabel database
-			siswaBaru := database.DataSiswa{
-				Nama:         input.Nama,
-				NoHP:         input.NoHP,
-				TanggalLahir: parsedDate,
-				Kelas:        input.Kelas,
-				Divisi:       input.Divisi,
-			}
-
-			// Menyimpan ke database menggunakan GORM
-			if err := database.DB.Create(&siswaBaru).Error; err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menyimpan data ke database"})
-				return
-			}
-
-			c.JSON(http.StatusOK, gin.H{
-				"status":  "success",
-				"message": "Siswa berhasil didaftarkan ke JapaneseClub!",
-				"data":    siswaBaru,
-			})
+			// Kirim respon balik ke frontend tanda sukses
+			c.JSON(http.StatusOK, input)
 		})
 	}
 }
